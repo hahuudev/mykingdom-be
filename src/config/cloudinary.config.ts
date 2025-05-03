@@ -1,19 +1,21 @@
 import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import * as dotenv from 'dotenv';
 
+// Load environment variables
+dotenv.config();
+
+// Log configuration for debugging
+console.log('Cloudinary Config:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '***' : undefined,
+});
+
+// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-export const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'your-folder-name',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }],
-  } as any,
 });
 
 export default cloudinary;

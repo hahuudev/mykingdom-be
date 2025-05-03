@@ -34,7 +34,7 @@ export class AuthService {
     });
 
     // Generate tokens
-    const tokens = await this.generateTokens(user._id.toString(), user.email);
+    const { accessToken, refreshToken } = await this.generateTokens(user._id.toString(), user.email);
 
     return {
       user: {
@@ -43,7 +43,10 @@ export class AuthService {
         username: user.username,
         avatar: user.avatar,
       },
-      ...tokens,
+      accessToken,
+      refreshToken,
+      accessTokenTtl: Number(this.configService.get<string>('auth.jwtExpires')),
+      refreshTokenTtl: Number(this.configService.get<string>('auth.refreshTokenTime')),
     };
   }
 
@@ -72,6 +75,8 @@ export class AuthService {
         username: user.username,
       },
       ...tokens,
+      accessTokenTtl: Number(this.configService.get<string>('auth.jwtExpires')),
+      refreshTokenTtl: Number(this.configService.get<string>('auth.refreshTokenTime')),
     };
   }
 
@@ -85,7 +90,7 @@ export class AuthService {
 
     if (user) {
       // Update existing user's Google provider if not present
-      const hasGoogleProvider = user.providers.some(p => p.provider === 'google');
+      const hasGoogleProvider = user.providers.some((p) => p.provider === 'google');
       if (!hasGoogleProvider) {
         user = await this.userModel.findByIdAndUpdate(
           user._id,
@@ -107,10 +112,12 @@ export class AuthService {
         username: googleData.name,
         avatar: googleData.picture,
         password: '', // Empty password for Google users
-        providers: [{
-          provider: 'google',
-          providerId: googleData.email,
-        }],
+        providers: [
+          {
+            provider: 'google',
+            providerId: googleData.email,
+          },
+        ],
       });
     }
 
@@ -137,7 +144,7 @@ export class AuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.jwtExpires'),
+          expiresIn: this.configService.get<string>('auth.jwtExpires') + 'm',
         },
       ),
       this.jwtService.signAsync(
@@ -147,7 +154,7 @@ export class AuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.refreshTokenTime'),
+          expiresIn: this.configService.get<string>('auth.refreshTokenTime') + 'm',
         },
       ),
     ]);
@@ -160,7 +167,7 @@ export class AuthService {
 
   async getProfile(userId: string) {
     const user = await this.userModel.findById(userId);
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -173,4 +180,3 @@ export class AuthService {
     };
   }
 }
-

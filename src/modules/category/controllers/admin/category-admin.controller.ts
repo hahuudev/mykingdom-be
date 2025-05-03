@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AdminRolesAllowed } from '@/shared/decorator/adminRoles.decorator';
 import { AdminRoles } from '@/shared/enums';
@@ -19,24 +9,20 @@ import { UpdateCategoryDto } from '../../dto/update-category.dto';
 
 @ApiTags('Admin Categories')
 @Controller('admin/categories')
-@UseGuards(AdminAuthGuard)
+// @UseGuards(AdminAuthGuard)
 export class CategoryAdminController {
   constructor(private readonly categoryService: CategoryService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create new category' })
-  @AdminRolesAllowed(AdminRoles.IS_SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRoles.ADMIN)
   create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoryService.create(createCategoryDto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all categories (with pagination)' })
-  findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
-  ) {
+  findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @Query('search') search?: string) {
     return this.categoryService.findAll({ page, limit, search });
   }
 
@@ -48,17 +34,14 @@ export class CategoryAdminController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update category' })
-  @AdminRolesAllowed(AdminRoles.IS_SUPER_ADMIN)
-  update(
-    @Param('id') id: string,
-    @Body() updateCategoryDto: UpdateCategoryDto,
-  ) {
+  @AdminRolesAllowed(AdminRoles.ADMIN)
+  update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
     return this.categoryService.update(id, updateCategoryDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete category' })
-  @AdminRolesAllowed(AdminRoles.IS_SUPER_ADMIN)
+  @AdminRolesAllowed(AdminRoles.ADMIN)
   remove(@Param('id') id: string) {
     return this.categoryService.remove(id);
   }

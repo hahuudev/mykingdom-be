@@ -11,13 +11,8 @@ export class CreateCategoryDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ example: 'category-image.jpg' })
+  @ApiProperty({ example: 'https://picsum.photos/300/300' })
   @IsString()
   @IsOptional()
   image?: string;
-
-  @ApiProperty({ example: true })
-  @IsBoolean()
-  @IsOptional()
-  isActive?: boolean;
 }

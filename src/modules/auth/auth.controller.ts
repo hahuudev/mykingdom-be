@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, HttpCode } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthService } from './google-auth.service';
 import { CreateAuthDto, SignInDto } from './dto/create-auth.dto';
@@ -36,7 +36,7 @@ export class AuthController {
     return this.authService.handleGoogleAuth(googleData);
   }
 
-  @Post('signup')
+  @Post('sign-up')
   @ApiOperation({ summary: 'Sign up new user' })
   @ApiResponse({ status: 201, description: 'User successfully created' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
@@ -44,10 +44,11 @@ export class AuthController {
     return this.authService.signup(createAuthDto);
   }
 
-  @Post('signin')
+  @Post('sign-in')
   @ApiOperation({ summary: 'Sign in user' })
   @ApiResponse({ status: 200, description: 'User successfully authenticated' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @HttpCode(200)
   signin(@Body() signInDto: SignInDto) {
     return this.authService.signin(signInDto);
   }

@@ -1,16 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { UploadModule } from './modules/upload/upload.module';
-
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import appConfig from './config/app.config';
-import authConfig from './config/auth.config';
-import databaseConfig from './config/database.config';
+import { CoreModule } from './modules/core/core.module';
+import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdminAuthModule } from './modules/admin-auth/admin-auth.module';
-import { DatabaseModule } from './database/database.module';
-import { CoreModule } from './modules/core/core.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { CategoryModule } from './modules/category/category.module';
+import { BrandModule } from './modules/brand/brand.module';
+import { ProductModule } from './modules/product/product.module';
+import { UserModule } from './modules/user/user.module';
+import { AdminModule } from './modules/admin/admin.module';
+import authConfig from './config/auth.config';
+import appConfig from './config/app.config';
+import databaseConfig from './config/database.config';
+import serverConfig from './config/server.config';
 
 @Module({
   imports: [
@@ -18,12 +23,17 @@ import { CoreModule } from './modules/core/core.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [authConfig, appConfig, databaseConfig],
+      load: [authConfig, appConfig, databaseConfig, serverConfig],
     }),
     DatabaseModule,
     AuthModule,
     AdminAuthModule,
     UploadModule,
+    CategoryModule,
+    BrandModule,
+    ProductModule,
+    UserModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

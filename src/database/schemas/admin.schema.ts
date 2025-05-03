@@ -1,11 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
+import { AdminRoles } from '@/shared/enums';
 
 export type AdminDocument = Admin & Document;
-export enum AdminRole {
-  ADMIN='ADMIN',
-  SUPER_ADMIN='SUPER_ADMIN',
-}
 
 @Schema({ timestamps: true })
 export class Admin {
@@ -22,21 +19,11 @@ export class Admin {
   password: string;
 
   @Prop({
-    type: [
-      {
-        provider: { type: String, required: true }, 
-        providerId: { type: String, required: true },
-      },
-    ],
-    default: [],
+    type: String,
+    enum: AdminRoles,
+    default: AdminRoles.ADMIN,
   })
-  providers: {
-    provider: string;
-    providerId: string;
-  }[];
-
-  @Prop({ default: AdminRole.ADMIN })
-  role: AdminRole;
+  role: AdminRoles;
 
   @Prop({ default: true })
   isActive: boolean;

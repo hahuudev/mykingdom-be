@@ -77,7 +77,26 @@ export function convertPageToSkipTake(
   }
   
   export function isValidNumber(value: any): boolean {
+    if (value === undefined || value === null) return false;
+    
     const num = Number(value);
     return !isNaN(num) && isFinite(num) && num >= 0;
+  }
+
+  export function validateNumericField(value: any, fieldName: string): number {
+    // Check if value is undefined or null
+    if (value === undefined || value === null) {
+      throw new Error(`${fieldName} is required`);
+    }
+    
+    // Convert to number if it's a string
+    const numValue = typeof value === 'string' ? Number(value) : value;
+    
+    // Check if it's a valid number
+    if (isNaN(numValue) || !isFinite(numValue)) {
+      throw new Error(`${fieldName} must be a valid number`);
+    }
+    
+    return numValue;
   }
   

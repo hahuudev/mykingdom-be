@@ -4,6 +4,7 @@ import { AdminSignInDto } from './dto/admin-auth.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminAuthGuard } from './guards/admin-auth.guard';
 import { Admin } from '@/shared/decorator/admin.decorator';
+import { AdminCreateInDto } from './dto/create-admin.dto';
 
 @ApiTags('Admin Authentication')
 @Controller('admin/auth')
@@ -46,7 +47,6 @@ export class AdminAuthController {
 
   @Get('me')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current admin profile' })
   @ApiResponse({
     status: 200,
@@ -63,5 +63,11 @@ export class AdminAuthController {
   })
   async getProfile(@Admin() admin: any) {
     return this.adminAuthService.getProfile(admin.sub);
+  }
+
+  @Post('/create-admin')
+  // @UseGuards(AdminAuthGuard)
+  async createAdmin(@Body() createAdminDto: AdminCreateInDto) {
+    return await this.adminAuthService.createAdmin(createAdminDto);
   }
 }

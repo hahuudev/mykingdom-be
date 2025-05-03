@@ -129,8 +129,13 @@ export enum OnchainStatus {
   CONFIRMED = 'confirmed',
 }
 export enum AdminRoles {
-  IS_SUPER_ADMIN = 1,
-  IS_ADMIN = 0,
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+}
+
+export enum AdminStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 export const UserGender = {
@@ -287,3 +292,4 @@ export const CourseDateAndTimeType = {
 export const TxnType = {
   BUY_TICKET: 'BUY_TICKET',
 };
+

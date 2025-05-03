@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { Admin, AdminDocument } from '@/database/schemas/admin.schema';
 import { AdminSignInDto } from './dto/admin-auth.dto';
 import { Hash } from '@/utils/Hash';
+import { AdminCreateInDto } from './dto/create-admin.dto';
 
 @Injectable()
 export class AdminAuthService {
@@ -20,10 +21,7 @@ export class AdminAuthService {
 
     // Find admin by email or username
     const admin = await this.adminModel.findOne({
-      $or: [
-        { email: identifier.toLowerCase() },
-        { username: identifier }
-      ],
+      $or: [{ email: identifier.toLowerCase() }, { username: identifier }],
       isActive: true,
     });
 
@@ -41,7 +39,7 @@ export class AdminAuthService {
     const tokens = await this.generateTokens(admin._id.toString(), admin.email, admin.role);
 
     return {
-      admin: {
+      user: {
         id: admin._id,
         email: admin.email,
         username: admin.username,
@@ -63,7 +61,7 @@ export class AdminAuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.jwtExpires'),
+          expiresIn: this.configService.get<string>('auth.jwtExpires')+'m',
         },
       ),
       this.jwtService.signAsync(
@@ -75,7 +73,7 @@ export class AdminAuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.refreshTokenTime'),
+          expiresIn: this.configService.get<string>('auth.refreshTokenTime')+'m',
         },
       ),
     ]);
@@ -83,12 +81,14 @@ export class AdminAuthService {
     return {
       accessToken,
       refreshToken,
+      accessTokenTtl: Number(this.configService.get<string>('auth.jwtExpires')),
+      refreshTokenTtl: Number(this.configService.get<string>('auth.refreshTokenTime')),
     };
   }
 
   async getProfile(adminId: string) {
     const admin = await this.adminModel.findById(adminId);
-    
+
     if (!admin) {
       throw new NotFoundException('Admin not found');
     }
@@ -101,5 +101,24 @@ export class AdminAuthService {
       avatar: admin.avatar,
     };
   }
-}
 
+  async createAdmin(adminCreateDto: AdminCreateInDto) {
+    const { email, username, password } = adminCreateDto;
+
+    // Check if admin already exists
+    const existingAdmin = await this.adminModel.findOne({ $or: [{ email }, { username }] });
+    if (existingAdmin) {
+      throw new UnauthorizedException('Email or username already exists');
+    }
+
+    // Create new admin
+    const hashedPassword = Hash.make(password);
+    const admin = await this.adminModel.create({
+      email,
+      username,
+      password: hashedPassword,
+    });
+
+    return admin;
+  }
+}

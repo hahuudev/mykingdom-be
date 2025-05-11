@@ -1,16 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { 
-  IsString, 
-  IsOptional, 
-  IsBoolean, 
-  IsNumber, 
-  IsArray, 
-  IsDate, 
-  ValidateNested, 
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsArray,
+  IsDate,
+  ValidateNested,
   IsMongoId,
   Min,
   Max,
-  IsObject
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Types } from 'mongoose';
@@ -19,11 +19,6 @@ class ProductVariantDto {
   @ApiProperty({ example: 'SKU123' })
   @IsString()
   sku: string;
-
-  @ApiPropertyOptional({ example: 'Red, Large' })
-  @IsString()
-  @IsOptional()
-  name?: string;
 
   @ApiProperty({ example: 29.99 })
   @IsNumber({ allowNaN: false, allowInfinity: false })
@@ -51,12 +46,6 @@ class ProductVariantDto {
   @IsObject()
   @IsOptional()
   attributes?: Record<string, string>;
-
-  @ApiPropertyOptional({ example: ['https://example.com/red-large.jpg'] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  images?: string[];
 }
 
 export class CreateProductDto {
@@ -90,6 +79,11 @@ export class CreateProductDto {
   @IsOptional()
   primaryCategoryId?: Types.ObjectId;
 
+  @ApiProperty({ example: 100 })
+  @IsNumber()
+  @Min(0)
+  originalPrice: number;
+
   @ApiPropertyOptional({ example: '60c72b2f9b44a52b88d56789' })
   @IsMongoId()
   @IsOptional()
@@ -107,12 +101,12 @@ export class CreateProductDto {
   @IsOptional()
   tags?: string[];
 
-  @ApiPropertyOptional({ 
-    example: { 
-      'Pieces': '7541', 
-      'Age': '16+', 
-      'Dimensions': '33cm x 22cm x 8cm' 
-    } 
+  @ApiPropertyOptional({
+    example: {
+      Pieces: '7541',
+      Age: '16+',
+      Dimensions: '33cm x 22cm x 8cm',
+    },
   })
   @IsObject()
   @IsOptional()
@@ -154,29 +148,4 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isBestSeller?: boolean;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  viewCount?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  totalSoldCount?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  @IsOptional()
-  averageRating?: number;
-
-  @ApiPropertyOptional({ example: 0 })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  reviewCount?: number;
 }

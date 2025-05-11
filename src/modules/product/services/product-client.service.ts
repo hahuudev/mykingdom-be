@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
 import { Product, ProductDocument } from '@/database/schemas/product.schema';
+import { ProductFavorite, ProductFavoriteDocument } from '@/database/schemas/product-favorite.schema';
 import { UpdateProductStatsDto } from '../dto/update-product-stats.dto';
+import { isValidNumber } from '@/utils/common';
 
 @Injectable()
 export class ProductClientService {
-  constructor(@InjectModel(Product.name) private productModel: Model<ProductDocument>) {}
+  constructor(
+    @InjectModel(Product.name) private productModel: Model<ProductDocument>,
+    @InjectModel(ProductFavorite.name) private favoriteModel: Model<ProductFavoriteDocument>,
+  ) {}
 
   async findAll(options: {
     page?: number;
@@ -19,6 +24,7 @@ export class ProductClientService {
     tags?: string[];
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    userId?: string | null;
   }) {
     const {
       page = 1,
@@ -31,22 +37,12 @@ export class ProductClientService {
       tags,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      userId = null,
     } = options;
 
     const skip = (page - 1) * limit;
     const query: any = { isActive: true };
 
-    // Apply date-based availability filters
-    const now = new Date();
-    query.$or = [{ availableFrom: { $exists: false } }, { availableFrom: null }, { availableFrom: { $lte: now } }];
-
-    query.$and = [
-      {
-        $or: [{ availableTo: { $exists: false } }, { availableTo: null }, { availableTo: { $gte: now } }],
-      },
-    ];
-
-    // Apply other filters
     if (categoryId) {
       query.categories = new Types.ObjectId(categoryId);
     }
@@ -55,52 +51,83 @@ export class ProductClientService {
       query.brandId = new Types.ObjectId(brandId);
     }
 
-    if (minPrice && maxPrice) {
-      query['variants.price'] = {};
-      if (minPrice !== undefined) {
-        query['variants.price'].$gte = minPrice;
-      }
-      if (maxPrice !== undefined) {
-        query['variants.price'].$lte = maxPrice;
-      }
-    }
+    // Validate price values before using them in the query
+    // if (minPrice || maxPrice) {
+    //   query['variants.price'] = {};
+
+    //   if (minPrice) {
+    //     query['variants.price'].$gte = Number(minPrice);
+    //   }
+
+    //   if (maxPrice) {
+    //     query['variants.price'].$lte = Number(maxPrice);
+    //   }
+    // }
 
     if (tags && tags.length > 0) {
       query.tags = { $in: tags };
     }
 
     if (search) {
-      // Add search to the existing $and array
-      query.$and.push({
-        $or: [
-          { name: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
-          { brandName: { $regex: search, $options: 'i' } },
-          { tags: { $regex: search, $options: 'i' } },
-        ],
-      });
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { brandName: { $regex: search, $options: 'i' } },
+        { tags: { $regex: search, $options: 'i' } },
+      ];
     }
 
     // Prepare sort
     const sort: any = {};
     sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
 
-    console.log(JSON.stringify(query))
-
     const [items, total] = await Promise.all([
       this.productModel
-        .find()
+        .find(query)
         .skip(skip)
         .limit(limit)
         .sort(sort)
         .populate('categories', 'name slug')
         .populate('primaryCategoryId', 'name slug')
-        .populate('brandId', 'name slug'),
+        .populate('brandId', 'name slug')
+        .select('name slug images variants originalPrice'),
       this.productModel.countDocuments(query),
     ]);
 
+    // Check favorite status if userId is provided
+    let favorites = new Set<string>();
+    if (userId) {
+      const userFavorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: items.map((item) => item._id) },
+      });
+      favorites = new Set(userFavorites.map((fav) => fav.productId.toString()));
+    }
+
+    const products = items.map((item) => {
+      const product = item.toObject ? item.toObject() : item;
+      if (userId) {
+        product.isFavorite = favorites.has(item._id.toString());
+      }
+
+      const { primaryCategoryId, brandId, variants, ...rest } = product;
+
+      return {
+        ...rest,
+        primaryCategory: primaryCategoryId,
+        brand: brandId,
+        currentPrice: Math.min(...variants.map((variant) => variant.price)),
+        variants: variants.map((variant) => ({
+          sku: variant.sku,
+          price: variant.price,
+          quantity: variant.quantity,
+          attributes: variant.attributes,
+        })),
+      };
+    });
+
     return {
-      items,
+      items: products,
       meta: {
         total,
         page,
@@ -110,7 +137,7 @@ export class ProductClientService {
     };
   }
 
-  async findOne(idOrSlug: string) {
+  async findOne(idOrSlug: string, userId: string | null = null) {
     const query: any = { isActive: true };
 
     // Check if the provided string is a valid MongoDB ObjectId
@@ -143,10 +170,27 @@ export class ProductClientService {
     // Increment view count
     await this.productModel.findByIdAndUpdate(product._id, { $inc: { viewCount: 1 } });
 
-    return product;
+    // Check if product is favorited by user
+    const result = product.toObject ? product.toObject() : product;
+    if (userId) {
+      const isFavorite = await this.favoriteModel.exists({
+        userId: new Types.ObjectId(userId),
+        productId: product._id,
+      });
+      result.isFavorite = !!isFavorite;
+    }
+
+    const currentPrice = Math.min(...result.variants.map((variant) => variant.price));
+
+    const productResult = {
+      ...result,
+      totalQuantity: result.variants.reduce((acc, variant) => acc + variant.quantity, 0),
+      currentPrice,
+    };
+    return productResult;
   }
 
-  async getFeaturedProducts(limit: number = 10) {
+  async getFeaturedProducts(limit: number = 10, userId: string | null = null) {
     const now = new Date();
     const query = {
       isActive: true,
@@ -159,15 +203,34 @@ export class ProductClientService {
       ],
     };
 
-    return this.productModel
+    const products = await this.productModel
       .find(query)
       .limit(limit)
       .sort({ createdAt: -1 })
       .populate('primaryCategoryId', 'name slug')
       .populate('brandId', 'name slug');
+
+    // Check favorite status if userId is provided
+    if (userId) {
+      const productIds = products.map((p) => p._id);
+      const favorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: productIds },
+      });
+
+      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
+
+      return products.map((product) => {
+        const result = product.toObject ? product.toObject() : product;
+        result.isFavorite = favoriteSet.has(product._id.toString());
+        return result;
+      });
+    }
+
+    return products;
   }
 
-  async getBestSellerProducts(limit: number = 10) {
+  async getBestSellerProducts(limit: number = 10, userId: string | null = null) {
     const now = new Date();
     const query = {
       isActive: true,
@@ -182,15 +245,34 @@ export class ProductClientService {
       ],
     };
 
-    return this.productModel
+    const products = await this.productModel
       .find(query)
       .limit(limit)
       .sort({ totalSoldCount: -1, viewCount: -1 })
       .populate('primaryCategoryId', 'name slug')
       .populate('brandId', 'name slug');
+
+    // Check favorite status if userId is provided
+    if (userId) {
+      const productIds = products.map((p) => p._id);
+      const favorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: productIds },
+      });
+
+      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
+
+      return products.map((product) => {
+        const result = product.toObject ? product.toObject() : product;
+        result.isFavorite = favoriteSet.has(product._id.toString());
+        return result;
+      });
+    }
+
+    return products;
   }
 
-  async getNewArrivalProducts(limit: number = 10) {
+  async getNewArrivalProducts(limit: number = 10, userId: string | null = null) {
     const now = new Date();
     const query = {
       isActive: true,
@@ -203,15 +285,34 @@ export class ProductClientService {
       ],
     };
 
-    return this.productModel
+    const products = await this.productModel
       .find(query)
       .limit(limit)
       .sort({ createdAt: -1 })
       .populate('primaryCategoryId', 'name slug')
       .populate('brandId', 'name slug');
+
+    // Check favorite status if userId is provided
+    if (userId) {
+      const productIds = products.map((p) => p._id);
+      const favorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: productIds },
+      });
+
+      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
+
+      return products.map((product) => {
+        const result = product.toObject ? product.toObject() : product;
+        result.isFavorite = favoriteSet.has(product._id.toString());
+        return result;
+      });
+    }
+
+    return products;
   }
 
-  async getOnSaleProducts(limit: number = 10) {
+  async getOnSaleProducts(limit: number = 10, userId: string | null = null) {
     const now = new Date();
     const query = {
       isActive: true,
@@ -224,15 +325,34 @@ export class ProductClientService {
       ],
     };
 
-    return this.productModel
+    const products = await this.productModel
       .find(query)
       .limit(limit)
       .sort({ createdAt: -1 })
       .populate('primaryCategoryId', 'name slug')
       .populate('brandId', 'name slug');
+
+    // Check favorite status if userId is provided
+    if (userId) {
+      const productIds = products.map((p) => p._id);
+      const favorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: productIds },
+      });
+
+      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
+
+      return products.map((product) => {
+        const result = product.toObject ? product.toObject() : product;
+        result.isFavorite = favoriteSet.has(product._id.toString());
+        return result;
+      });
+    }
+
+    return products;
   }
 
-  async getRelatedProducts(productId: string, limit: number = 4) {
+  async getRelatedProducts(productId: string, limit: number = 4, userId: string | null = null) {
     const product = await this.productModel.findById(productId);
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -253,12 +373,31 @@ export class ProductClientService {
       ],
     };
 
-    return this.productModel
+    const products = await this.productModel
       .find(query)
       .limit(limit)
       .sort({ totalSoldCount: -1, viewCount: -1 })
       .populate('primaryCategoryId', 'name slug')
       .populate('brandId', 'name slug');
+
+    // Check favorite status if userId is provided
+    if (userId) {
+      const productIds = products.map((p) => p._id);
+      const favorites = await this.favoriteModel.find({
+        userId: new Types.ObjectId(userId),
+        productId: { $in: productIds },
+      });
+
+      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
+
+      return products.map((product) => {
+        const result = product.toObject ? product.toObject() : product;
+        result.isFavorite = favoriteSet.has(product._id.toString());
+        return result;
+      });
+    }
+
+    return products;
   }
 
   async incrementProductStats(id: string, statsDto: UpdateProductStatsDto) {

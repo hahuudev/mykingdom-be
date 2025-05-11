@@ -16,6 +16,7 @@ import authConfig from './config/auth.config';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import serverConfig from './config/server.config';
+import { ProductFavoriteModule } from './modules/product-favorite/product-favorite.module';
 
 @Module({
   imports: [
@@ -34,10 +35,9 @@ import serverConfig from './config/server.config';
     ProductModule,
     UserModule,
     AdminModule,
+    ProductFavoriteModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
-
-

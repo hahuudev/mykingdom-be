@@ -1,22 +1,36 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Model, Types } from 'mongoose';
-import slugify from 'slugify';
+import { Document, Model, Schema as MongooseSchema, Types } from 'mongoose';
 
+import slugify from 'slugify';
 export type ProductDocument = Product & Document;
 
-// Define variant interface
-interface ProductVariant {
+// Define variant schema separately to avoid circular references
+@Schema({ _id: true })
+export class ProductVariant {
+  @Prop({ required: true })
   sku: string;
-  name?: string;
+
+  @Prop({ required: true, type: Number })
   price: number;
+
+  @Prop({ type: Number })
   salePrice?: number;
+
+  @Prop({ required: true, type: Number, default: 0 })
   quantity: number;
-  soldCount?: number;
+
+  @Prop({ required: true, type: Number, default: 0 })
+  soldCount: number;
+
+  @Prop({ type: Object })
   attributes?: Record<string, string>;
-  images?: string[];
 }
 
-@Schema({ timestamps: true })
+const ProductVariantSchema = SchemaFactory.createForClass(ProductVariant);
+
+@Schema({
+  timestamps: true,
+})
 export class Product {
   @Prop({ required: true })
   name: string;
@@ -24,82 +38,70 @@ export class Product {
   @Prop({ type: String, unique: true, lowercase: true })
   slug: string;
 
-  @Prop({ type: String, default: null })
-  description: string;
+  @Prop()
+  description?: string;
 
-  @Prop({ type: String, default: 'simple' })
-  type: 'simple' | 'variable';
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Category' }] })
+  categories?: Types.ObjectId[];
 
-  @Prop({ type: [String], default: [] })
-  images: string[];
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category' })
+  primaryCategoryId?: Types.ObjectId;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Category' }], default: [] })
-  categories: Types.ObjectId[];
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Brand' })
+  brandId?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Category' })
-  primaryCategoryId: Types.ObjectId;
-
-  @Prop({ type: Types.ObjectId, ref: 'Brand' })
-  brandId: Types.ObjectId;
-
-
-  @Prop({
-    type: [{
-      sku: { type: String, required: true },
-      name: { type: String },
-      price: { type: Number, required: true },
-      salePrice: { type: Number },
-      quantity: { type: Number, default: 0 },
-      soldCount: { type: Number, default: 0 },
-      attributes: { type: Object },
-      images: { type: [String], default: [] }
-    }],
-    default: [{
-      sku: '',
-      price: 0,
-      quantity: 0,
-      soldCount: 0
-    }]
-  })
-  variants: ProductVariant[];
-
-  @Prop({ type: Number, default: 0 })
-  viewCount: number;
-
-  @Prop({ type: Number, default: 0 })
-  totalSoldCount: number;
-
-  @Prop({ type: Number, default: 0, min: 0, max: 5 })
-  averageRating: number;
-
-  @Prop({ type: Number, default: 0 })
-  reviewCount: number;
+  @Prop()
+  brandName?: string;
 
   @Prop({ type: [String], default: [] })
-  tags: string[];
+  tags?: string[];
 
-  @Prop({ type: Object, default: {} })
-  specifications: Record<string, string>;
+  @Prop({ type: [String], default: [] })
+  images?: string[];
+
+  @Prop({ type: [ProductVariantSchema], default: [] })
+  variants?: ProductVariant[];
 
   @Prop({ default: true })
-  isActive: boolean;
+  isActive?: boolean;
 
   @Prop({ default: false })
-  isFeatured: boolean;
+  isFeatured?: boolean;
 
   @Prop({ default: false })
-  isOnSale: boolean;
+  isNewArrival?: boolean;
 
   @Prop({ default: false })
-  isNewArrival: boolean;
+  isBestSeller?: boolean;
 
   @Prop({ default: false })
-  isBestSeller: boolean;
+  isOnSale?: boolean;
+
+  @Prop({ type: Date })
+  availableFrom?: Date;
+
+  @Prop({ type: Date })
+  availableTo?: Date;
+
+  @Prop({ type: Number, default: 0 })
+  viewCount?: number;
+
+  @Prop({ required: true, type: Number })
+  originalPrice: number;
+
+  // Don't use getter/setter for virtual properties
+  // This can cause infinite recursion
+
+  totalSoldCount?: number;
+  isFavorite?: boolean;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
-// Add indexes for better query performance
+// Add virtual for isFavorite without using getter/setter
+// ProductSchema.virtual('isFavorite');
+
+// Fix the pre-save hook to avoid potential infinite recursion
 ProductSchema.index({ slug: 1 }, { unique: true });
 ProductSchema.index({ name: 1 });
 ProductSchema.index({ categories: 1 });
@@ -119,12 +121,12 @@ ProductSchema.index({ 'variants.sku': 1 });
 ProductSchema.index({ 'variants.soldCount': -1 });
 
 // Pre-save middleware to generate slug and validate prices
-ProductSchema.pre('save', async function(next) {
+ProductSchema.pre('save', async function (next) {
   // Generate slug if name is modified
   if (this.isModified('name')) {
     this.slug = await generateUniqueSlug(this.constructor as Model<ProductDocument>, this.name, this._id.toString());
   }
-  
+
   // Validate prices in variants
   if (this.variants && Array.isArray(this.variants)) {
     for (const variant of this.variants) {
@@ -132,41 +134,41 @@ ProductSchema.pre('save', async function(next) {
       if (variant.price === undefined || variant.price === null || isNaN(Number(variant.price))) {
         return next(new Error(`Invalid price value in variant: ${variant.sku || ''}`));
       }
-      
+
       // Convert price to number if it's a string
       if (typeof variant.price === 'string') {
         variant.price = Number(variant.price);
       }
-      
+
       // Ensure salePrice is a valid number if provided
       if (variant.salePrice !== undefined && variant.salePrice !== null) {
         if (isNaN(Number(variant.salePrice))) {
           return next(new Error(`Invalid sale price value in variant: ${variant.sku || ''}`));
         }
-        
+
         // Convert salePrice to number if it's a string
         if (typeof variant.salePrice === 'string') {
           variant.salePrice = Number(variant.salePrice);
         }
       }
-      
+
       // Ensure quantity is a valid number
       if (variant.quantity === undefined || variant.quantity === null || isNaN(Number(variant.quantity))) {
         return next(new Error(`Invalid quantity value in variant: ${variant.sku || ''}`));
       }
-      
+
       // Convert quantity to number if it's a string
       if (typeof variant.quantity === 'string') {
         variant.quantity = Number(variant.quantity);
       }
     }
   }
-  
+
   next();
 });
 
 // Pre-update middleware to generate slug
-ProductSchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
+ProductSchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update.name || update.$set?.name) {
     const name = update.name || update.$set.name;
@@ -178,11 +180,7 @@ ProductSchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
 });
 
 // Helper function to generate unique slug
-async function generateUniqueSlug(
-  model: Model<ProductDocument>,
-  name: string,
-  excludeId?: string,
-): Promise<string> {
+async function generateUniqueSlug(model: Model<ProductDocument>, name: string, excludeId?: string): Promise<string> {
   const baseSlug = slugify(name, {
     lower: true,
     strict: true,
@@ -190,12 +188,10 @@ async function generateUniqueSlug(
     locale: 'vi',
   });
 
-  const query = excludeId 
-    ? { slug: baseSlug, _id: { $ne: new Types.ObjectId(excludeId) } }
-    : { slug: baseSlug };
-  
+  const query = excludeId ? { slug: baseSlug, _id: { $ne: new Types.ObjectId(excludeId) } } : { slug: baseSlug };
+
   const existingWithSlug = await model.findOne(query);
-  
+
   if (!existingWithSlug) {
     return baseSlug;
   }
@@ -203,16 +199,13 @@ async function generateUniqueSlug(
   // If slug exists, add a counter until we find an available slug
   let counter = 1;
   let newSlug = `${baseSlug}-${counter}`;
-  
-  while (await model.findOne(
-    excludeId 
-      ? { slug: newSlug, _id: { $ne: new Types.ObjectId(excludeId) } }
-      : { slug: newSlug }
-  )) {
+
+  while (
+    await model.findOne(excludeId ? { slug: newSlug, _id: { $ne: new Types.ObjectId(excludeId) } } : { slug: newSlug })
+  ) {
     counter += 1;
     newSlug = `${baseSlug}-${counter}`;
   }
-  
+
   return newSlug;
 }
-

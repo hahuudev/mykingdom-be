@@ -79,8 +79,11 @@ export function convertPageToSkipTake(
   export function isValidNumber(value: any): boolean {
     if (value === undefined || value === null) return false;
     
-    const num = Number(value);
-    return !isNaN(num) && isFinite(num) && num >= 0;
+    // Handle string conversion
+    const num = typeof value === 'string' ? Number(value) : value;
+    
+    // Check if it's a valid number
+    return typeof num === 'number' && !isNaN(num) && isFinite(num);
   }
 
   export function validateNumericField(value: any, fieldName: string): number {
@@ -100,3 +103,4 @@ export function convertPageToSkipTake(
     return numValue;
   }
   
+

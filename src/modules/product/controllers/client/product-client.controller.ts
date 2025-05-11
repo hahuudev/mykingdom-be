@@ -1,15 +1,18 @@
-import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Param, Query, Post, Body, Request, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductClientService } from '../../services/product-client.service';
 import { UpdateProductStatsDto } from '../../dto/update-product-stats.dto';
+import { Public } from '@/modules/auth/decorators/public.decorator';
 
 @ApiTags('Products')
 @Controller('products')
+@Public() // Make all endpoints public by default
 export class ProductClientController {
   constructor(private readonly productClientService: ProductClientService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all active products' })
+  @Public()
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
@@ -17,78 +20,111 @@ export class ProductClientController {
   @ApiQuery({ name: 'brandId', required: false, type: String })
   @ApiQuery({ name: 'minPrice', required: false, type: Number })
   @ApiQuery({ name: 'maxPrice', required: false, type: Number })
-  @ApiQuery({ name: 'tags', required: false, type: [String] })
+  @ApiQuery({ name: 'tags', required: false, type: Boolean })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   findAll(
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('categoryId') categoryId?: string,
     @Query('brandId') brandId?: string,
-    @Query('minPrice') minPrice?: number,
-    @Query('maxPrice') maxPrice?: number,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
     @Query('tags') tags?: string[],
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
-    console.log('ssssssssssssssssssssssssssss')
+    const userId = req.user?.sub || null;
+    
+    // Parse numeric values safely
+    const parsedPage = page ? parseInt(page, 10) || 1 : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) || 10 : undefined;
+    
+    // Use null for invalid numbers instead of NaN
+    const parsedMinPrice = minPrice ? (isNaN(parseFloat(minPrice)) ? null : parseFloat(minPrice)) : undefined;
+    const parsedMaxPrice = maxPrice ? (isNaN(parseFloat(maxPrice)) ? null : parseFloat(maxPrice)) : undefined;
+    
+    // If either price is invalid, throw an error
+    if (parsedMinPrice === null) {
+      throw new BadRequestException('minPrice must be a valid number');
+    }
+    
+    if (parsedMaxPrice === null) {
+      throw new BadRequestException('maxPrice must be a valid number');
+    }
+    
     return this.productClientService.findAll({
-      page,
-      limit,
+      page: parsedPage,
+      limit: parsedLimit,
       search,
       categoryId,
       brandId,
-      minPrice,
-      maxPrice,
+      minPrice: parsedMinPrice,
+      maxPrice: parsedMaxPrice,
       tags,
       sortBy,
       sortOrder,
+      userId,
     });
   }
 
   @Get('featured')
   @ApiOperation({ summary: 'Get featured products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getFeatured(@Query('limit') limit: number = 10) {
-    return this.productClientService.getFeaturedProducts(limit);
+  @ApiBearerAuth() // Optional auth
+  getFeatured(@Request() req, @Query('limit') limit: number = 10) {
+    const userId = req.user?.sub || null;
+    return this.productClientService.getFeaturedProducts(limit, userId);
   }
 
   @Get('best-sellers')
   @ApiOperation({ summary: 'Get best seller products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getBestSellers(@Query('limit') limit: number = 10) {
-    return this.productClientService.getBestSellerProducts(limit);
+  @ApiBearerAuth() // Optional auth
+  getBestSellers(@Request() req, @Query('limit') limit: number = 10) {
+    const userId = req.user?.sub || null;
+    return this.productClientService.getBestSellerProducts(limit, userId);
   }
 
   @Get('new-arrivals')
   @ApiOperation({ summary: 'Get new arrival products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getNewArrivals(@Query('limit') limit: number = 10) {
-    return this.productClientService.getNewArrivalProducts(limit);
+  @ApiBearerAuth() // Optional auth
+  getNewArrivals(@Request() req, @Query('limit') limit: number = 10) {
+    const userId = req.user?.sub || null;
+    return this.productClientService.getNewArrivalProducts(limit, userId);
   }
 
   @Get('on-sale')
   @ApiOperation({ summary: 'Get on sale products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getOnSale(@Query('limit') limit: number = 10) {
-    return this.productClientService.getOnSaleProducts(limit);
+  @ApiBearerAuth() // Optional auth
+  getOnSale(@Request() req, @Query('limit') limit: number = 10) {
+    const userId = req.user?.sub || null;
+    return this.productClientService.getOnSaleProducts(limit, userId);
   }
 
   @Get(':idOrSlug')
   @ApiOperation({ summary: 'Get product by ID or slug' })
-  findOne(@Param('idOrSlug') idOrSlug: string) {
-    return this.productClientService.findOne(idOrSlug);
+  @ApiBearerAuth() // Optional auth
+  findOne(@Request() req, @Param('idOrSlug') idOrSlug: string) {
+    const userId = req.user?.sub || null;
+    return this.productClientService.findOne(idOrSlug, userId);
   }
 
   @Get(':id/related')
   @ApiOperation({ summary: 'Get related products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiBearerAuth() // Optional auth
   getRelated(
+    @Request() req,
     @Param('id') id: string,
     @Query('limit') limit: number = 4,
   ) {
-    return this.productClientService.getRelatedProducts(id, limit);
+    const userId = req.user?.sub || null;
+    return this.productClientService.getRelatedProducts(id, limit, userId);
   }
 
   @Post(':id/stats')
@@ -100,3 +136,6 @@ export class ProductClientController {
     return this.productClientService.incrementProductStats(id, statsDto);
   }
 }
+
+
+

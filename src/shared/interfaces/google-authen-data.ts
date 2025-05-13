@@ -4,4 +4,3 @@ export interface GoogleAuthenData {
   picture: string;
   email_verified: boolean;
 }
-

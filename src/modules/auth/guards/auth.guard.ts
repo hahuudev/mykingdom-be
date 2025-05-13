@@ -23,7 +23,7 @@ export class AuthGuard implements CanActivate {
       // but not require it
       const request = context.switchToHttp().getRequest();
       const token = this.extractTokenFromHeader(request);
-      
+
       if (token) {
         try {
           const payload = await this.jwtService.verifyAsync(token, {
@@ -35,18 +35,18 @@ export class AuthGuard implements CanActivate {
           // Just continue without setting the user
         }
       }
-      
+
       return true;
     }
 
     // For protected routes, token is required
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
       throw new UnauthorizedException();
     }
-    
+
     try {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('auth.secret'),
@@ -55,7 +55,7 @@ export class AuthGuard implements CanActivate {
     } catch (error) {
       throw new UnauthorizedException();
     }
-    
+
     return true;
   }
 
@@ -64,5 +64,3 @@ export class AuthGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
-
-

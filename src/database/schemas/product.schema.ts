@@ -24,6 +24,8 @@ export class ProductVariant {
 
   @Prop({ type: Object })
   attributes?: Record<string, string>;
+
+  _id?: string;
 }
 
 const ProductVariantSchema = SchemaFactory.createForClass(ProductVariant);
@@ -88,6 +90,9 @@ export class Product {
 
   @Prop({ required: true, type: Number })
   originalPrice: number;
+
+  @Prop({ type: Object })
+  attributes?: Record<string, string>;
 
   // Don't use getter/setter for virtual properties
   // This can cause infinite recursion

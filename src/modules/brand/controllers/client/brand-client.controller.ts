@@ -12,16 +12,12 @@ export class BrandClientController {
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
-  findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
-  ) {
-    return this.brandService.findAll({ 
-      page, 
-      limit, 
-      search, 
-      isActive: true 
+  findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @Query('search') search?: string) {
+    return this.brandService.findAll({
+      page,
+      limit,
+      search,
+      isActive: true,
     });
   }
 

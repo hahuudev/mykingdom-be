@@ -1,10 +1,5 @@
 import { CallHandler, ExecutionContext } from '@nestjs/common';
-import {
-  DataResponse,
-  MessageResponse,
-  Meta,
-  StatusCode,
-} from '../http/response';
+import { DataResponse, MessageResponse, Meta, StatusCode } from '../http/response';
 import { lastValueFrom, of } from 'rxjs';
 import { ResponseTransformer } from './response.transformer';
 
@@ -31,14 +26,9 @@ describe('ResponseTransformerInterceptor', () => {
   });
 
   it('should transform DataResponse', async () => {
-    const dataResponse = new DataResponse(
-      StatusCode.SUCCESS,
-      'success',
-      undefined,
-      {
-        key: 'value',
-      }
-    );
+    const dataResponse = new DataResponse(StatusCode.SUCCESS, 'success', undefined, {
+      key: 'value',
+    });
     jest.spyOn(next, 'handle').mockReturnValue(of(dataResponse));
 
     const result = await lastValueFrom(interceptor.intercept(context, next));
@@ -62,8 +52,6 @@ describe('ResponseTransformerInterceptor', () => {
 
     const result = await lastValueFrom(interceptor.intercept(context, next));
 
-    expect(result).toEqual(
-      new DataResponse(StatusCode.SUCCESS, 'success', undefined, complexObject)
-    );
+    expect(result).toEqual(new DataResponse(StatusCode.SUCCESS, 'success', undefined, complexObject));
   });
 });

@@ -11,8 +11,8 @@ import { ProductFavoriteService } from './services/product-favorite.service';
     JwtModule.register({}),
     MongooseModule.forFeature([
       { name: ProductFavorite.name, schema: ProductFavoriteSchema },
-      { name: Product.name, schema: ProductSchema }
-    ])
+      { name: Product.name, schema: ProductSchema },
+    ]),
   ],
   controllers: [ProductFavoriteController],
   providers: [ProductFavoriteService],

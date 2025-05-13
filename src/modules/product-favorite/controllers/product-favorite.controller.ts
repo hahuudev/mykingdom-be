@@ -21,11 +21,7 @@ export class ProductFavoriteController {
   @ApiOperation({ summary: 'Get user favorite products' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  getFavorites(
-    @Request() req,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
-  ) {
+  getFavorites(@Request() req, @Query('page') page?: number, @Query('limit') limit?: number) {
     return this.favoriteService.getFavorites(req.user.sub, page, limit);
   }
 

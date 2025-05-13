@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import Redis from 'ioredis';
 import { WebSocketsGateway } from './websockets.gateway';
 import { createClient } from 'redis';
-import { getLogger } from '@/shared/logger';
+import { getLogger } from 'src/shared/logger';
 
 const logger = getLogger('WebSocketsGateway');
 

@@ -37,24 +37,24 @@ export class ProductClientController {
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
   ) {
     const userId = req.user?.sub || null;
-    
+
     // Parse numeric values safely
     const parsedPage = page ? parseInt(page, 10) || 1 : undefined;
     const parsedLimit = limit ? parseInt(limit, 10) || 10 : undefined;
-    
+
     // Use null for invalid numbers instead of NaN
     const parsedMinPrice = minPrice ? (isNaN(parseFloat(minPrice)) ? null : parseFloat(minPrice)) : undefined;
     const parsedMaxPrice = maxPrice ? (isNaN(parseFloat(maxPrice)) ? null : parseFloat(maxPrice)) : undefined;
-    
+
     // If either price is invalid, throw an error
     if (parsedMinPrice === null) {
       throw new BadRequestException('minPrice must be a valid number');
     }
-    
+
     if (parsedMaxPrice === null) {
       throw new BadRequestException('maxPrice must be a valid number');
     }
-    
+
     return this.productClientService.findAll({
       page: parsedPage,
       limit: parsedLimit,
@@ -81,15 +81,17 @@ export class ProductClientController {
 
   @Get('best-sellers')
   @ApiOperation({ summary: 'Get best seller products' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiBearerAuth() // Optional auth
-  getBestSellers(@Request() req, @Query('limit') limit: number = 10) {
+  getBestSellers(@Request() req, @Query('limit') limit: number = 10, @Query('page') page: number = 1) {
     const userId = req.user?.sub || null;
-    return this.productClientService.getBestSellerProducts(limit, userId);
+    return this.productClientService.getBestSellerProducts(limit, page, userId);
   }
 
   @Get('new-arrivals')
   @ApiOperation({ summary: 'Get new arrival products' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiBearerAuth() // Optional auth
   getNewArrivals(@Request() req, @Query('limit') limit: number = 10) {
@@ -99,6 +101,7 @@ export class ProductClientController {
 
   @Get('on-sale')
   @ApiOperation({ summary: 'Get on sale products' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiBearerAuth() // Optional auth
   getOnSale(@Request() req, @Query('limit') limit: number = 10) {
@@ -115,27 +118,20 @@ export class ProductClientController {
   }
 
   @Get(':id/related')
+  @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiOperation({ summary: 'Get related products' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiBearerAuth() // Optional auth
-  getRelated(
-    @Request() req,
-    @Param('id') id: string,
-    @Query('limit') limit: number = 4,
-  ) {
+  getRelated(@Request() req, @Param('id') id: string, @Query('limit') limit: string, @Query('page') page: string) {
     const userId = req.user?.sub || null;
-    return this.productClientService.getRelatedProducts(id, limit, userId);
+    const parsedPage = page ? parseInt(page, 10) || 1 : undefined;
+    const parsedLimit = limit ? parseInt(limit, 10) || 10 : undefined;
+    return this.productClientService.getRelatedProducts(id, parsedLimit, parsedPage, userId);
   }
 
   @Post(':id/stats')
   @ApiOperation({ summary: 'Update product statistics (client)' })
-  updateStats(
-    @Param('id') id: string,
-    @Body() statsDto: UpdateProductStatsDto,
-  ) {
+  updateStats(@Param('id') id: string, @Body() statsDto: UpdateProductStatsDto) {
     return this.productClientService.incrementProductStats(id, statsDto);
   }
 }
-
-
-

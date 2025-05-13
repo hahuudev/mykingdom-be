@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  Param,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from '../../services/user.service';
 import { UpdateUserDto } from '../../dto/update-user.dto';
@@ -32,7 +24,7 @@ export class UserClientController {
   updateProfile(@Request() req, @Body() updateUserDto: UpdateUserDto) {
     // Prevent users from changing sensitive fields
     delete updateUserDto.isActive;
-    
+
     return this.userService.update(req.user.sub, updateUserDto);
   }
 

@@ -11,7 +11,7 @@ import { AdminAuthModule } from '../admin-auth/admin-auth.module';
   imports: [
     JwtModule.register({}),
     MongooseModule.forFeature([{ name: Brand.name, schema: BrandSchema }]),
-    AdminAuthModule
+    AdminAuthModule,
   ],
   controllers: [BrandAdminController, BrandClientController],
   providers: [BrandService],

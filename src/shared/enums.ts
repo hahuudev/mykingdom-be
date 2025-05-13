@@ -292,4 +292,3 @@ export const CourseDateAndTimeType = {
 export const TxnType = {
   BUY_TICKET: 'BUY_TICKET',
 };
-

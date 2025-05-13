@@ -8,9 +8,7 @@ export class GoogleAuthService {
   private oAuth2Client: OAuth2Client;
 
   constructor(private configService: ConfigService) {
-    this.oAuth2Client = new OAuth2Client(
-      this.configService.get<string>('app.clientId')
-    );
+    this.oAuth2Client = new OAuth2Client(this.configService.get<string>('app.clientId'));
   }
 
   async verify(token: string): Promise<GoogleAuthenData> {

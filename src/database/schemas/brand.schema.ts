@@ -40,7 +40,7 @@ BrandSchema.index({ isActive: 1 });
 BrandSchema.index({ isFeatured: 1 });
 
 // Pre-save middleware to generate slug
-BrandSchema.pre('save', async function(next) {
+BrandSchema.pre('save', async function (next) {
   if (this.isModified('name')) {
     this.slug = await generateUniqueSlug(this.constructor as Model<BrandDocument>, this.name, this._id.toString());
   }
@@ -48,7 +48,7 @@ BrandSchema.pre('save', async function(next) {
 });
 
 // Pre-update middleware to generate slug
-BrandSchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
+BrandSchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
   const update = this.getUpdate() as any;
   if (update.name || update.$set?.name) {
     const name = update.name || update.$set.name;
@@ -60,25 +60,19 @@ BrandSchema.pre(['updateOne', 'findOneAndUpdate'], async function(next) {
 });
 
 // Helper function to generate unique slug
-async function generateUniqueSlug(
-  model: Model<BrandDocument>,
-  name: string,
-  excludeId?: string,
-): Promise<string> {
+async function generateUniqueSlug(model: Model<BrandDocument>, name: string, excludeId?: string): Promise<string> {
   const baseSlug = slugify(name, {
-    lower: true,      // Convert to lowercase
-    strict: true,     // Remove special characters
-    trim: true,       // Trim leading and trailing spaces
-    locale: 'vi',     // Support Vietnamese characters
+    lower: true, // Convert to lowercase
+    strict: true, // Remove special characters
+    trim: true, // Trim leading and trailing spaces
+    locale: 'vi', // Support Vietnamese characters
   });
 
   // Check if base slug is available
-  const query = excludeId 
-    ? { slug: baseSlug, _id: { $ne: new Types.ObjectId(excludeId) } }
-    : { slug: baseSlug };
-  
+  const query = excludeId ? { slug: baseSlug, _id: { $ne: new Types.ObjectId(excludeId) } } : { slug: baseSlug };
+
   const existingWithSlug = await model.findOne(query);
-  
+
   if (!existingWithSlug) {
     return baseSlug;
   }
@@ -86,15 +80,13 @@ async function generateUniqueSlug(
   // If slug exists, add a counter until we find an available slug
   let counter = 1;
   let newSlug = `${baseSlug}-${counter}`;
-  
-  while (await model.findOne(
-    excludeId 
-      ? { slug: newSlug, _id: { $ne: new Types.ObjectId(excludeId) } }
-      : { slug: newSlug }
-  )) {
+
+  while (
+    await model.findOne(excludeId ? { slug: newSlug, _id: { $ne: new Types.ObjectId(excludeId) } } : { slug: newSlug })
+  ) {
     counter += 1;
     newSlug = `${baseSlug}-${counter}`;
   }
-  
+
   return newSlug;
 }

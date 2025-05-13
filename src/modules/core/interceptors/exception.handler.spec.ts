@@ -71,10 +71,7 @@ describe('ExceptionHandler', () => {
       },
     });
 
-    expect(mockAppendHeader).toHaveBeenCalledWith(
-      'instruction',
-      'refresh_token',
-    );
+    expect(mockAppendHeader).toHaveBeenCalledWith('instruction', 'refresh_token');
     expect(exceptionHandler['logger'].error).not.toHaveBeenCalled();
   });
 
@@ -97,7 +94,7 @@ describe('ExceptionHandler', () => {
   });
 
   it('should set bad request data on BadRequestException', () => {
-    const exception = new BadRequestException({message: 'Bad Request'});
+    const exception = new BadRequestException({ message: 'Bad Request' });
     exceptionHandler.catch(exception, hostMock);
 
     expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
@@ -115,12 +112,10 @@ describe('ExceptionHandler', () => {
   });
 
   it('should set internal error data on InternalServerErrorException', () => {
-    const exception = new InternalServerErrorException({message: 'Something went wrong'});
+    const exception = new InternalServerErrorException({ message: 'Something went wrong' });
     exceptionHandler.catch(exception, hostMock);
 
-    expect(mockSetStatus).toHaveBeenCalledWith(
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
 
     expect(mockSetJson).toHaveBeenCalledWith({
       meta: {
@@ -138,9 +133,7 @@ describe('ExceptionHandler', () => {
     const exception = new Error('Other Error');
     exceptionHandler.catch(exception, hostMock);
 
-    expect(mockSetStatus).toHaveBeenCalledWith(
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
 
     expect(mockSetJson).toHaveBeenCalledWith({
       meta: {
@@ -159,9 +152,7 @@ describe('ExceptionHandler', () => {
     const exception = new Error('Other Error');
     exceptionHandler.catch(exception, hostMock);
 
-    expect(mockSetStatus).toHaveBeenCalledWith(
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
 
     expect(mockSetJson).toHaveBeenCalledWith({
       meta: {
@@ -191,10 +182,7 @@ describe('ExceptionHandler', () => {
   });
 
   it('handles HttpException with object message', () => {
-    const exception = new HttpException(
-      { message: 'Bad Request' },
-      HttpStatus.BAD_REQUEST,
-    );
+    const exception = new HttpException({ message: 'Bad Request' }, HttpStatus.BAD_REQUEST);
     exceptionHandler.catch(exception, hostMock);
 
     expect(mockSetJson).toHaveBeenCalledWith({
@@ -209,10 +197,7 @@ describe('ExceptionHandler', () => {
   });
 
   it('handles HttpException with array message', () => {
-    const exception = new HttpException(
-      { message: ['Error 1', 'Error 2'] },
-      HttpStatus.BAD_REQUEST,
-    );
+    const exception = new HttpException({ message: ['Error 1', 'Error 2'] }, HttpStatus.BAD_REQUEST);
     exceptionHandler.catch(exception, hostMock);
 
     expect(mockSetJson).toHaveBeenCalledWith({
@@ -227,10 +212,7 @@ describe('ExceptionHandler', () => {
   });
 
   it('handles TokenExpiredError', () => {
-    const exception = new TokenExpiredError(
-      'Token is expired',
-      new Date('2024-08-09T06:21:18.087Z'),
-    );
+    const exception = new TokenExpiredError('Token is expired', new Date('2024-08-09T06:21:18.087Z'));
     exceptionHandler.catch(exception, hostMock);
 
     expect(mockSetJson).toHaveBeenCalledWith({
@@ -242,10 +224,7 @@ describe('ExceptionHandler', () => {
       },
     });
     expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
-    expect(mockAppendHeader).toHaveBeenCalledWith(
-      'instruction',
-      'refresh_token',
-    );
+    expect(mockAppendHeader).toHaveBeenCalledWith('instruction', 'refresh_token');
   });
 
   it('handles UnauthorizedException with invalid access token', () => {
@@ -277,9 +256,7 @@ describe('ExceptionHandler', () => {
         url: 'test',
       },
     });
-    expect(mockSetStatus).toHaveBeenCalledWith(
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
   });
 
   it('handles generic Error in production environment', () => {
@@ -295,8 +272,6 @@ describe('ExceptionHandler', () => {
         url: 'test',
       },
     });
-    expect(mockSetStatus).toHaveBeenCalledWith(
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    expect(mockSetStatus).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
   });
 });

@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, HttpCode, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GoogleAuthService } from './google-auth.service';
 import { CreateAuthDto, SignInDto } from './dto/create-auth.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from './guards/auth.guard';
 import { User } from '@/shared/decorator/user.decorator';
 
@@ -72,5 +72,22 @@ export class AuthController {
   async getProfile(@User() user: any) {
     return this.authService.getProfile(user.sub);
   }
-}
 
+  @Post('verify-email')
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired verification token' })
+  @ApiQuery({ name: 'token', required: true, type: String })
+  verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Post('resend-verification')
+  @ApiOperation({ summary: 'Resend verification email' })
+  @ApiResponse({ status: 200, description: 'Verification email sent successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 400, description: 'Email is already verified' })
+  resendVerificationEmail(@Body('email') email: string) {
+    return this.authService.resendVerificationEmail(email);
+  }
+}

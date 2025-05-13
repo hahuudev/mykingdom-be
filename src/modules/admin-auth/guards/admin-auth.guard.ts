@@ -1,10 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
@@ -18,7 +12,7 @@ import { Admin, AdminDocument } from '@/database/schemas/admin.schema';
 @Injectable()
 export class AdminAuthGuard implements CanActivate {
   constructor(
-     @InjectModel(Admin.name) private adminModel: Model<AdminDocument>,
+    @InjectModel(Admin.name) private adminModel: Model<AdminDocument>,
     private jwtService: JwtService,
     private reflector: Reflector,
     private configService: ConfigService,
@@ -32,7 +26,7 @@ export class AdminAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
-    
+
     if (!token) {
       throw new UnauthorizedException('Missing authentication token');
     }
@@ -46,23 +40,23 @@ export class AdminAuthGuard implements CanActivate {
       if (!admin) {
         throw new UnauthorizedException('Admin not found');
       }
-      
+
       // Check if the admin is active
       if (!admin.isActive) {
         throw new ForbiddenException('Admin account is inactive');
       }
-      
+
       // Check if the admin has the required role
       // if (requiredRoles && !requiredRoles.includes(payload.role)) {
       //   throw new ForbiddenException('Insufficient permissions');
       // }
-      
+
       // Attach admin to request
       request.admin = payload;
     } catch (error) {
       throw new UnauthorizedException(error.message || 'Invalid token');
     }
-    
+
     return true;
   }
 

@@ -31,5 +31,3 @@ export class Hash {
     return Hash.check(value, hashedValue);
   }
 }
-
-

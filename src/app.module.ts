@@ -12,11 +12,14 @@ import { BrandModule } from './modules/brand/brand.module';
 import { ProductModule } from './modules/product/product.module';
 import { UserModule } from './modules/user/user.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { CartModule } from './modules/cart/cart.module';
+import { ProductFavoriteModule } from './modules/product-favorite/product-favorite.module';
+import { EmailModule } from './modules/email/email.module';
 import authConfig from './config/auth.config';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import serverConfig from './config/server.config';
-import { ProductFavoriteModule } from './modules/product-favorite/product-favorite.module';
+import emailConfig from './config/email.config';
 
 @Module({
   imports: [
@@ -24,7 +27,7 @@ import { ProductFavoriteModule } from './modules/product-favorite/product-favori
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      load: [authConfig, appConfig, databaseConfig, serverConfig],
+      load: [authConfig, appConfig, databaseConfig, serverConfig, emailConfig],
     }),
     DatabaseModule,
     AuthModule,
@@ -35,7 +38,9 @@ import { ProductFavoriteModule } from './modules/product-favorite/product-favori
     ProductModule,
     UserModule,
     AdminModule,
+    CartModule,
     ProductFavoriteModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

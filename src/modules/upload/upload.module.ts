@@ -5,10 +5,7 @@ import { UploadService } from './upload.service';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [
-    JwtModule.register({}),
-    AuthModule, 
-  ],
+  imports: [JwtModule.register({}), AuthModule],
   controllers: [UploadController],
   providers: [UploadService],
 })

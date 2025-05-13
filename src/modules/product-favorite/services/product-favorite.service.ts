@@ -53,7 +53,7 @@ export class ProductFavoriteService {
     ]);
 
     // Transform the data to return product details
-    const favorites = items.map(item => ({
+    const favorites = items.map((item) => ({
       ...item,
       product: item.productId,
     }));

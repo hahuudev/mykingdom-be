@@ -26,7 +26,7 @@ export class UpdateProductStatsDto {
   @Max(5)
   @IsOptional()
   averageRating?: number;
-  
+
   @ApiPropertyOptional({ example: 1 })
   @IsNumber()
   @Min(0)

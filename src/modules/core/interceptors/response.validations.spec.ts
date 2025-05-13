@@ -1,9 +1,5 @@
 import { Test } from '@nestjs/testing';
-import {
-  ExecutionContext,
-  InternalServerErrorException,
-  CallHandler,
-} from '@nestjs/common';
+import { ExecutionContext, InternalServerErrorException, CallHandler } from '@nestjs/common';
 import { Observable, of, lastValueFrom } from 'rxjs';
 import { ResponseValidation } from './response.validations';
 import * as classValidator from 'class-validator';
@@ -38,9 +34,7 @@ describe('ResponseValidationInterceptor', () => {
 
     (classValidator.validateSync as jest.Mock).mockReturnValue([]);
 
-    await expect(
-      lastValueFrom(interceptor.intercept(context, mockCallHandler))
-    ).resolves.not.toThrow();
+    await expect(lastValueFrom(interceptor.intercept(context, mockCallHandler))).resolves.not.toThrow();
 
     expect(classValidator.validateSync).toHaveBeenCalled();
   });
@@ -52,13 +46,11 @@ describe('ResponseValidationInterceptor', () => {
 
     jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of({}));
 
-    (classValidator.validateSync as jest.Mock).mockReturnValue([
-      validationError,
-    ]);
+    (classValidator.validateSync as jest.Mock).mockReturnValue([validationError]);
 
-    await expect(
-      lastValueFrom(interceptor.intercept(context, mockCallHandler))
-    ).rejects.toThrow(InternalServerErrorException);
+    await expect(lastValueFrom(interceptor.intercept(context, mockCallHandler))).rejects.toThrow(
+      InternalServerErrorException,
+    );
 
     expect(classValidator.validateSync).toHaveBeenCalled();
   });
@@ -89,16 +81,12 @@ describe('ResponseValidationInterceptor', () => {
       children: [{ constraints: { nestedConstraint: 'Nested error message' } }],
     };
 
-    jest
-      .spyOn(mockCallHandler, 'handle')
-      .mockReturnValue(of(responseWithNestedErrors));
-    (classValidator.validateSync as jest.Mock).mockReturnValue([
-      validationError,
-    ]);
+    jest.spyOn(mockCallHandler, 'handle').mockReturnValue(of(responseWithNestedErrors));
+    (classValidator.validateSync as jest.Mock).mockReturnValue([validationError]);
 
-    await expect(
-      lastValueFrom(interceptor.intercept(context, mockCallHandler))
-    ).rejects.toThrow(InternalServerErrorException);
+    await expect(lastValueFrom(interceptor.intercept(context, mockCallHandler))).rejects.toThrow(
+      InternalServerErrorException,
+    );
 
     expect(classValidator.validateSync).toHaveBeenCalled();
   });

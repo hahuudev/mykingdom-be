@@ -72,18 +72,17 @@ export class UploadController {
   async testCloudinaryConfig() {
     try {
       // Test Cloudinary configuration
-      const testResult = await cloudinary.uploader.upload(
-        "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-        { public_id: "test_connection" }
-      );
-      
+      const testResult = await cloudinary.uploader.upload('https://res.cloudinary.com/demo/image/upload/sample.jpg', {
+        public_id: 'test_connection',
+      });
+
       return {
         success: true,
         message: 'Cloudinary configuration is working',
         cloudName: process.env.CLOUDINARY_CLOUD_NAME,
         apiKeyConfigured: !!process.env.CLOUDINARY_API_KEY,
         apiSecretConfigured: !!process.env.CLOUDINARY_API_SECRET,
-        testResult
+        testResult,
       };
     } catch (error) {
       return {
@@ -92,9 +91,8 @@ export class UploadController {
         cloudName: process.env.CLOUDINARY_CLOUD_NAME,
         apiKeyConfigured: !!process.env.CLOUDINARY_API_KEY,
         apiSecretConfigured: !!process.env.CLOUDINARY_API_SECRET,
-        error: error.message
+        error: error.message,
       };
     }
   }
 }
-

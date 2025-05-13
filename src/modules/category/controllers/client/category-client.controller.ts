@@ -9,14 +9,10 @@ export class CategoryClientController {
 
   @Get()
   @ApiOperation({ summary: 'Get all active categories' })
-  @ApiQuery({ name: 'page', type:String, required: false })
-  @ApiQuery({ name: 'limit', type:String, required: false })
-  @ApiQuery({ name: 'search', type:String, required: false })
-  findAll(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
-  ) {
+  @ApiQuery({ name: 'page', type: String, required: false })
+  @ApiQuery({ name: 'limit', type: String, required: false })
+  @ApiQuery({ name: 'search', type: String, required: false })
+  findAll(@Query('page') page: number = 1, @Query('limit') limit: number = 10, @Query('search') search?: string) {
     return this.categoryService.findAll({ page, limit, search, isActive: true });
   }
 

@@ -7,15 +7,15 @@ import { ConfigService } from '@nestjs/config';
 export class UploadService implements OnModuleInit {
   private readonly logger = new Logger(UploadService.name);
   private readonly allowedMimeTypes = [
-    'image/jpeg', 
-    'image/png', 
-    'image/gif', 
+    'image/jpeg',
+    'image/png',
+    'image/gif',
     'image/webp',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   ];
   private readonly maxFileSize = 10 * 1024 * 1024; // 10MB
   private cloudinaryConfigured = false;
@@ -43,7 +43,7 @@ export class UploadService implements OnModuleInit {
         api_key: apiKey,
         api_secret: apiSecret,
       });
-      
+
       this.cloudinaryConfigured = true;
       this.logger.log('Cloudinary configured successfully');
     } catch (error) {
@@ -64,7 +64,9 @@ export class UploadService implements OnModuleInit {
 
     // Check file type
     if (!this.allowedMimeTypes.includes(file.mimetype)) {
-      throw new BadRequestException(`File type ${file.mimetype} is not allowed. Allowed types: ${this.allowedMimeTypes.join(', ')}`);
+      throw new BadRequestException(
+        `File type ${file.mimetype} is not allowed. Allowed types: ${this.allowedMimeTypes.join(', ')}`,
+      );
     }
 
     return true;
@@ -79,13 +81,13 @@ export class UploadService implements OnModuleInit {
           throw new Error('Cloudinary is not properly configured');
         }
       }
-      
+
       // Validate file
       this.validateFile(file);
-      
+
       // Upload to Cloudinary
       const result = await this.uploadToCloudinary(file);
-      
+
       return {
         url: result.secure_url,
         publicId: result.public_id,
@@ -95,7 +97,7 @@ export class UploadService implements OnModuleInit {
         resourceType: result.resource_type,
         size: file.size,
         originalName: file.originalname,
-        mimeType: file.mimetype
+        mimeType: file.mimetype,
       };
     } catch (error) {
       this.logger.error(`Upload failed: ${error.message}`, error.stack);
@@ -106,9 +108,9 @@ export class UploadService implements OnModuleInit {
   async uploadMultiple(files: Express.Multer.File[]) {
     try {
       // Validate each file
-      files.forEach(file => this.validateFile(file));
-      
-      const uploadPromises = files.map(file => this.uploadToCloudinary(file));
+      files.forEach((file) => this.validateFile(file));
+
+      const uploadPromises = files.map((file) => this.uploadToCloudinary(file));
       const results = await Promise.all(uploadPromises);
 
       return results.map((result, index) => ({
@@ -120,7 +122,7 @@ export class UploadService implements OnModuleInit {
         resourceType: result.resource_type,
         size: files[index].size,
         originalName: files[index].originalname,
-        mimeType: files[index].mimetype
+        mimeType: files[index].mimetype,
       }));
     } catch (error) {
       this.logger.error(`Multiple upload failed: ${error.message}`, error.stack);
@@ -131,7 +133,7 @@ export class UploadService implements OnModuleInit {
   private async uploadToCloudinary(file: Express.Multer.File) {
     return new Promise<any>((resolve, reject) => {
       const folderName = process.env.CLOUDINARY_FOLDER || 'uploads';
-      
+
       const upload = cloudinary.uploader.upload_stream(
         {
           folder: folderName,
@@ -140,7 +142,7 @@ export class UploadService implements OnModuleInit {
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
-        }
+        },
       );
 
       const buffer = Buffer.from(file.buffer);
@@ -149,5 +151,3 @@ export class UploadService implements OnModuleInit {
     });
   }
 }
-
-

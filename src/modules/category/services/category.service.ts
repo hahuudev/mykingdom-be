@@ -7,21 +7,14 @@ import { UpdateCategoryDto } from '../dto/update-category.dto';
 
 @Injectable()
 export class CategoryService {
-  constructor(
-    @InjectModel(Category.name) private categoryModel: Model<CategoryDocument>,
-  ) {}
+  constructor(@InjectModel(Category.name) private categoryModel: Model<CategoryDocument>) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     const created = new this.categoryModel(createCategoryDto);
     return created.save();
   }
 
-  async findAll(options: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    isActive?: boolean;
-  }) {
+  async findAll(options: { page?: number; limit?: number; search?: string; isActive?: boolean }) {
     const { page = 1, limit = 10, search, isActive } = options;
     const skip = (page - 1) * limit;
 
@@ -30,18 +23,11 @@ export class CategoryService {
       query.isActive = isActive;
     }
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-      ];
+      query.$or = [{ name: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } }];
     }
 
     const [items, total] = await Promise.all([
-      this.categoryModel
-        .find(query)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 }),
+      this.categoryModel.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
       this.categoryModel.countDocuments(query),
     ]);
 
@@ -70,11 +56,7 @@ export class CategoryService {
   }
 
   async update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    const updated = await this.categoryModel.findByIdAndUpdate(
-      id,
-      updateCategoryDto,
-      { new: true },
-    );
+    const updated = await this.categoryModel.findByIdAndUpdate(id, updateCategoryDto, { new: true });
     if (!updated) {
       throw new NotFoundException('Category not found');
     }

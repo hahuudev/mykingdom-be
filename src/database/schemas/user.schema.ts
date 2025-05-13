@@ -20,7 +20,7 @@ export class User {
   @Prop({
     type: [
       {
-        provider: { type: String, required: true }, 
+        provider: { type: String, required: true },
         providerId: { type: String, required: true },
       },
     ],
@@ -31,9 +31,17 @@ export class User {
     providerId: string;
   }[];
 
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ type: String, default: null })
+  verificationToken: string;
+
+  @Prop({ type: Date, default: null })
+  verificationTokenExpires: Date;
+
   @Prop({ default: true })
   isActive: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
-

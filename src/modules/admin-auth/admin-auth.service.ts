@@ -61,7 +61,7 @@ export class AdminAuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.jwtExpires')+'m',
+          expiresIn: this.configService.get<string>('auth.jwtExpires') + 'm',
         },
       ),
       this.jwtService.signAsync(
@@ -73,7 +73,7 @@ export class AdminAuthService {
         },
         {
           secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.refreshTokenTime')+'m',
+          expiresIn: this.configService.get<string>('auth.refreshTokenTime') + 'm',
         },
       ),
     ]);

@@ -7,5 +7,3 @@ export default registerAs('database', () => ({
     useUnifiedTopology: true,
   },
 }));
-
-

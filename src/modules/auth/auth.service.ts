@@ -1,19 +1,27 @@
-import { Injectable, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { JwtService } from '@nestjs/jwt';
 import { CreateAuthDto, SignInDto } from './dto/create-auth.dto';
 import { User, UserDocument } from '@/database/schemas/user.schema';
 import { Hash } from '@/utils/Hash';
 import { ConfigService } from '@nestjs/config';
 import { GoogleAuthenData } from '@/shared/interfaces/google-authen-data';
+import { TokenService } from './token.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private jwtService: JwtService,
     private configService: ConfigService,
+    private tokenService: TokenService,
+    private emailService: EmailService,
   ) {}
 
   async signup(createAuthDto: CreateAuthDto) {
@@ -25,16 +33,26 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
+    // Generate verification token
+    const verificationToken = this.tokenService.generateVerificationToken();
+    const verificationTokenExpires = this.tokenService.getTokenExpirationDate(24); // 24 hours
+
     // Create new user
     const hashedPassword = Hash.make(password);
     const user = await this.userModel.create({
       email,
       username,
       password: hashedPassword,
+      verificationToken,
+      verificationTokenExpires,
+      isEmailVerified: false,
     });
 
+    // Send verification email
+    await this.emailService.sendVerificationEmail(email, username, verificationToken);
+
     // Generate tokens
-    const { accessToken, refreshToken } = await this.generateTokens(user._id.toString(), user.email);
+    const tokens = await this.tokenService.generateAuthTokens(user._id.toString(), user.email);
 
     return {
       user: {
@@ -42,11 +60,10 @@ export class AuthService {
         email: user.email,
         username: user.username,
         avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified,
       },
-      accessToken,
-      refreshToken,
-      accessTokenTtl: Number(this.configService.get<string>('auth.jwtExpires')),
-      refreshTokenTtl: Number(this.configService.get<string>('auth.refreshTokenTime')),
+      ...tokens,
+      message: 'Registration successful. Please check your email to verify your account.',
     };
   }
 
@@ -65,18 +82,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
+
     // Generate tokens
-    const tokens = await this.generateTokens(user._id.toString(), user.email);
+    const tokens = await this.tokenService.generateAuthTokens(user._id.toString(), user.email);
 
     return {
       user: {
         id: user._id,
         email: user.email,
         username: user.username,
+        avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified,
       },
       ...tokens,
-      accessTokenTtl: Number(this.configService.get<string>('auth.jwtExpires')),
-      refreshTokenTtl: Number(this.configService.get<string>('auth.refreshTokenTime')),
     };
   }
 
@@ -101,6 +122,8 @@ export class AuthService {
                 providerId: googleData.email,
               },
             },
+            // Mark email as verified since Google already verified it
+            isEmailVerified: true,
           },
           { new: true },
         );
@@ -118,11 +141,12 @@ export class AuthService {
             providerId: googleData.email,
           },
         ],
+        isEmailVerified: true, // Mark as verified since Google already verified it
       });
     }
 
     // Generate tokens
-    const tokens = await this.generateTokens(user._id.toString(), user.email);
+    const tokens = await this.tokenService.generateAuthTokens(user._id.toString(), user.email);
 
     return {
       user: {
@@ -130,38 +154,61 @@ export class AuthService {
         email: user.email,
         username: user.username,
         avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified,
       },
       ...tokens,
     };
   }
 
-  private async generateTokens(userId: string, email: string) {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(
-        {
-          sub: userId,
-          email,
-        },
-        {
-          secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.jwtExpires') + 'm',
-        },
-      ),
-      this.jwtService.signAsync(
-        {
-          sub: userId,
-          email,
-        },
-        {
-          secret: this.configService.get<string>('auth.secret'),
-          expiresIn: this.configService.get<string>('auth.refreshTokenTime') + 'm',
-        },
-      ),
-    ]);
+  async verifyEmail(token: string) {
+    // Find user with this verification token
+    const user = await this.userModel.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired verification token');
+    }
+
+    // Update user as verified
+    user.isEmailVerified = true;
+    user.verificationToken = null;
+    user.verificationTokenExpires = null;
+    await user.save();
 
     return {
-      accessToken,
-      refreshToken,
+      success: true,
+      message: 'Email verified successfully',
+    };
+  }
+
+  async resendVerificationEmail(email: string) {
+    // Find user
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    // Generate new verification token
+    const verificationToken = this.tokenService.generateVerificationToken();
+    const verificationTokenExpires = this.tokenService.getTokenExpirationDate(24);
+
+    // Update user with new token
+    user.verificationToken = verificationToken;
+    user.verificationTokenExpires = verificationTokenExpires;
+    await user.save();
+
+    // Send verification email
+    await this.emailService.sendVerificationEmail(user.email, user.username, verificationToken);
+
+    return {
+      success: true,
+      message: 'Verification email sent successfully',
     };
   }
 

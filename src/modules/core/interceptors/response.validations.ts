@@ -18,25 +18,18 @@ export class ResponseValidation implements NestInterceptor {
           const errors = validateSync(data);
           if (errors.length > 0) {
             const messages = this.extractErrorMessages(errors);
-            throw new InternalServerErrorException([
-              'Response validation failed',
-              ...messages,
-            ]);
+            throw new InternalServerErrorException(['Response validation failed', ...messages]);
           }
         }
         return data;
-      })
+      }),
     );
   }
 
-  private extractErrorMessages(
-    errors: ValidationError[],
-    messages: string[] = []
-  ): string[] {
+  private extractErrorMessages(errors: ValidationError[], messages: string[] = []): string[] {
     for (const error of errors) {
       if (error) {
-        if (error.children && error.children.length > 0)
-          this.extractErrorMessages(error.children, messages);
+        if (error.children && error.children.length > 0) this.extractErrorMessages(error.children, messages);
         const constraints = error.constraints;
         if (constraints) messages.push(Object.values(constraints).join(', '));
       }

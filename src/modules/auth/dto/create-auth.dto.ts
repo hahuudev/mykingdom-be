@@ -12,7 +12,7 @@ export class CreateAuthDto {
 
   @ApiProperty({
     description: 'Email',
-    example: 'johndoe@example.com',
+    example: 'huunguyen@var-meta.com',
   })
   @IsNotEmpty()
   @IsEmail()
@@ -31,7 +31,7 @@ export class CreateAuthDto {
 export class SignInDto {
   @ApiProperty({
     description: 'Email',
-    example: 'johndoe@example.com',
+    example: 'huunguyen@var-meta.com',
   })
   @IsNotEmpty()
   @IsEmail()
@@ -44,4 +44,24 @@ export class SignInDto {
   @IsNotEmpty()
   @IsString()
   password: string;
+}
+
+export class VerifyEmailDto {
+  @ApiProperty({
+    description: 'Verification token',
+    example: '1a2b3c4d5e6f7g8h9i0j',
+  })
+  @IsNotEmpty()
+  @IsString()
+  token: string;
+}
+
+export class ResendVerificationDto {
+  @ApiProperty({
+    description: 'Email address',
+    example: 'user@example.com',
+  })
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
 }

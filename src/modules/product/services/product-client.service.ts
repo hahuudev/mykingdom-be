@@ -5,6 +5,7 @@ import { Product, ProductDocument } from '@/database/schemas/product.schema';
 import { ProductFavorite, ProductFavoriteDocument } from '@/database/schemas/product-favorite.schema';
 import { UpdateProductStatsDto } from '../dto/update-product-stats.dto';
 import { isValidNumber } from '@/utils/common';
+import { PaginationResponse } from '@/config/rest/paginationResponse';
 
 @Injectable()
 export class ProductClientService {
@@ -192,6 +193,7 @@ export class ProductClientService {
 
   async getFeaturedProducts(limit: number = 10, userId: string | null = null) {
     const now = new Date();
+
     const query = {
       isActive: true,
       isFeatured: true,
@@ -230,7 +232,8 @@ export class ProductClientService {
     return products;
   }
 
-  async getBestSellerProducts(limit: number = 10, userId: string | null = null) {
+  async getBestSellerProducts(limit: number = 10, page: number = 1, userId: string | null = null) {
+    const skip = (page - 1) * limit;
     const now = new Date();
     const query = {
       isActive: true,
@@ -245,12 +248,16 @@ export class ProductClientService {
       ],
     };
 
-    const products = await this.productModel
-      .find(query)
-      .limit(limit)
-      .sort({ totalSoldCount: -1, viewCount: -1 })
-      .populate('primaryCategoryId', 'name slug')
-      .populate('brandId', 'name slug');
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ totalSoldCount: -1, viewCount: -1 })
+        .populate('primaryCategoryId', 'name slug')
+        .populate('brandId', 'name slug'),
+      this.productModel.countDocuments(query),
+    ]);
 
     // Check favorite status if userId is provided
     if (userId) {
@@ -269,7 +276,15 @@ export class ProductClientService {
       });
     }
 
-    return products;
+    return {
+      items: products,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async getNewArrivalProducts(limit: number = 10, userId: string | null = null) {
@@ -312,7 +327,8 @@ export class ProductClientService {
     return products;
   }
 
-  async getOnSaleProducts(limit: number = 10, userId: string | null = null) {
+  async getOnSaleProducts(limit: number = 10, page: number = 1, userId: string | null = null) {
+    const skip = (page - 1) * limit;
     const now = new Date();
     const query = {
       isActive: true,
@@ -325,34 +341,46 @@ export class ProductClientService {
       ],
     };
 
-    const products = await this.productModel
-      .find(query)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .populate('primaryCategoryId', 'name slug')
-      .populate('brandId', 'name slug');
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .populate('primaryCategoryId', 'name slug')
+        .populate('brandId', 'name slug'),
+      this.productModel.countDocuments(query),
+    ]);
 
     // Check favorite status if userId is provided
+    let favorites = new Set<string>();
     if (userId) {
-      const productIds = products.map((p) => p._id);
-      const favorites = await this.favoriteModel.find({
+      const userFavorites = await this.favoriteModel.find({
         userId: new Types.ObjectId(userId),
-        productId: { $in: productIds },
+        productId: { $in: products.map((product) => product._id) },
       });
-
-      const favoriteSet = new Set(favorites.map((f) => f.productId.toString()));
-
-      return products.map((product) => {
-        const result = product.toObject ? product.toObject() : product;
-        result.isFavorite = favoriteSet.has(product._id.toString());
-        return result;
-      });
+      favorites = new Set(userFavorites.map((fav) => fav.productId.toString()));
     }
 
-    return products;
+    const productsWithFavoriteStatus = products.map((product) => {
+      const result = product.toObject ? product.toObject() : product;
+      result.isFavorite = favorites.has(product._id.toString());
+      return result;
+    });
+
+    return {
+      items: productsWithFavoriteStatus,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
-  async getRelatedProducts(productId: string, limit: number = 4, userId: string | null = null) {
+  async getRelatedProducts(productId: string, limit: number = 10, page: number = 1, userId: string | null = null) {
+    const skip = (page - 1) * limit;
     const product = await this.productModel.findById(productId);
     if (!product) {
       throw new NotFoundException('Product not found');
@@ -362,23 +390,24 @@ export class ProductClientService {
     const query = {
       _id: { $ne: product._id },
       isActive: true,
-      $or: [{ categories: { $in: product.categories } }, { brandId: product.brandId }, { tags: { $in: product.tags } }],
-      $and: [
-        {
-          $or: [{ availableFrom: { $exists: false } }, { availableFrom: null }, { availableFrom: { $lte: now } }],
-        },
-        {
-          $or: [{ availableTo: { $exists: false } }, { availableTo: null }, { availableTo: { $gte: now } }],
-        },
+      $or: [
+        { primaryCategoryId: product.primaryCategoryId },
+        { categories: { $in: product.categories } },
+        { brandId: product.brandId },
+        { tags: { $in: product.tags } },
       ],
     };
 
-    const products = await this.productModel
-      .find(query)
-      .limit(limit)
-      .sort({ totalSoldCount: -1, viewCount: -1 })
-      .populate('primaryCategoryId', 'name slug')
-      .populate('brandId', 'name slug');
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ totalSoldCount: -1, viewCount: -1 })
+        .populate('primaryCategoryId', 'name slug')
+        .populate('brandId', 'name slug'),
+      this.productModel.countDocuments(query),
+    ]);
 
     // Check favorite status if userId is provided
     if (userId) {
@@ -397,7 +426,15 @@ export class ProductClientService {
       });
     }
 
-    return products;
+    return {
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      items: products,
+    };
   }
 
   async incrementProductStats(id: string, statsDto: UpdateProductStatsDto) {
